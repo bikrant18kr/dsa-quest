@@ -40,6 +40,7 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
     <button data-page="review">🔁 <span>Smart Review</span></button>
     <button data-page="history">📅 <span>Day History</span></button>
     <button data-page="favorites">⭐ <span>Favorites</span></button>
+    <button data-page="pseudocode">✍️ <span>Pseudo Code Lab</span></button>
     <button data-page="settings">⚙️ <span>Account & Sync</span></button>
   </nav>
   <div class="side-user"><b id="userName">OA Warrior</b><div class="muted"><span id="syncDot" class="sync-dot"></span><span id="syncText">Local</span></div></div>
@@ -62,7 +63,7 @@ const DATA = {"master": [{"title": "Collect Coins In A Tree", "url": "https://le
 const DATA_KEY='dsaQuestCloudLocalV4';
 let db=null, user=null, mode='local', page='home', timer=null, timerLeft=1500;
 let S=JSON.parse(localStorage.getItem(DATA_KEY)||'{}');
-S.status=S.status||{};S.notes=S.notes||{};S.mistakes=S.mistakes||[];S.favorites=Array.isArray(S.favorites)?S.favorites:[];S.xp=S.xp||0;S.history=S.history||{};S.days=S.days||{};S.name=S.name||'OA Warrior';S.dailyGoal=S.dailyGoal||20;
+S.status=S.status||{};S.notes=S.notes||{};S.mistakes=S.mistakes||[];S.favorites=Array.isArray(S.favorites)?S.favorites:[];S.pseudocode=S.pseudocode||{};S.xp=S.xp||0;S.history=S.history||{};S.days=S.days||{};S.name=S.name||'OA Warrior';S.dailyGoal=S.dailyGoal||20;
 
 const $=s=>document.querySelector(s);
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
@@ -153,8 +154,8 @@ function setStatus(id,v){
 function dayNumber(){const n=Math.floor((new Date()-new Date('2026-08-17T00:00:00'))/86400000)+1;return Math.max(1,Math.min(Math.ceil(DATA.daily.length/20),n))}
 function go(p){page=p;document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===p));render(p)}
 function render(p){
-  const H={home:['DSA Quest 🚀','Make DSA revision addictive.'],today:[`Day ${dayNumber()} Mission 🎯`,'Concept → Recall → Timed.'],bank:['Master Bank 📚',DATA.master.length+' unique problems.'],patterns:['Pattern Lab 🧠','Train recognition, not memorization.'],focus:['Focus Room ⏱️','One problem. Full focus.'],mistakes:['Mistake Lab ⚡','Turn every failure into an advantage.'],analytics:['Analytics 📈','See exactly where you stand.'],oa:['OA Simulation ⚔️','Mixed problems. Pattern hidden.'],review:['Smart Review 🔁','Revisit the problems your memory needs.'],history:['Day History 📅','Open any previous or upcoming day.'],favorites:['Favorites ⭐','Your personal revisit list.'],settings:['Account & Sync ⚙️','Your profile, backup and cloud connection.']}[p];
-  $('#title').textContent=H[0];$('#subtitle').textContent=H[1];({home,today,bank,patterns,focus,mistakes,analytics,oa,review,history,favorites,settings}[p])();save();
+  const H={home:['DSA Quest 🚀','Make DSA revision addictive.'],today:[`Day ${dayNumber()} Mission 🎯`,'Concept → Recall → Timed.'],bank:['Master Bank 📚',DATA.master.length+' unique problems.'],patterns:['Pattern Lab 🧠','Train recognition, not memorization.'],focus:['Focus Room ⏱️','One problem. Full focus.'],mistakes:['Mistake Lab ⚡','Turn every failure into an advantage.'],analytics:['Analytics 📈','See exactly where you stand.'],oa:['OA Simulation ⚔️','Mixed problems. Pattern hidden.'],review:['Smart Review 🔁','Revisit the problems your memory needs.'],history:['Day History 📅','Open any previous or upcoming day.'],favorites:['Favorites ⭐','Your personal revisit list.'],pseudocode:['Pseudo Code Lab ✍️','Write and save your approach before coding.'],settings:['Account & Sync ⚙️','Your profile, backup and cloud connection.']}[p];
+  $('#title').textContent=H[0];$('#subtitle').textContent=H[1];({home,today,bank,patterns,focus,mistakes,analytics,oa,review,history,favorites,pseudocode,settings}[p])();save();
 }
 function isFavorite(id){return S.favorites.includes(id)}
 function toggleFavorite(id){
@@ -164,7 +165,7 @@ function toggleFavorite(id){
 function qcard(x){
   const v=status(x.id),fav=isFavorite(x.id);
   return `<div class=q><button class=check ${v==='Solved'?'done':''} onclick="setStatus('${x.id}','${v==='Solved'?'Not Started':'Solved'}')">${v==='Solved'?'✓':'○'}</button>
-  <div class=qm><div class=qn>${esc(x.title)}</div><div class=badges><span class=badge>${esc(x.topic)}</span><span class=badge>${esc(x.pattern)}</span><span class=badge>${esc(x.sources||x.source||'')}</span><span class="badge ${x.importance==='P1'?'p1':''}">${x.importance}</span></div></div>
+  <div class=qm><div class=qn>${esc(x.title)}</div></div>
   <button class=btn title="${fav?'Remove from Favorites':'Add to Favorites'}" onclick="toggleFavorite('${x.id}')">${fav?'⭐':'☆'}</button>
   <button class=btn onclick="openProblem('${x.id}')">Open</button></div>`;
 }
@@ -233,6 +234,29 @@ function pauseTimer(){clearInterval(timer);timer=null}function resetTimer(){paus
 function mistakes(){$('#root').innerHTML=`<div class=card><div class=head><h2>⚡ Mistake Lab</h2><button class="btn primary" onclick=addMistake>+ Log Mistake</button></div>${S.mistakes.length?S.mistakes.map((x,i)=>`<div class=q><div class=qm><b>${esc(x.problem)}</b><div class=badges><span class=badge>${esc(x.type)}</span><span class=badge>${esc(x.severity||'Medium')}</span></div><div class=muted>${esc(x.note||'')}</div></div><button class=btn onclick="S.mistakes.splice(${i},1);save();mistakes()">Delete</button></div>`).join(''):'<div class=empty>No mistakes logged yet. When you fail, capture why.</div>'}</div>`}
 function addMistake(){const p=prompt('Problem?');if(!p)return;const t=prompt('Failure type?')||'Implementation';const n=prompt('What should you notice next time?')||'';S.mistakes.unshift({problem:p,type:t,note:n,date:new Date().toISOString()});S.xp+=15;save();toast('⚡ +15 XP');mistakes()}
 function analytics(){const by={};DATA.master.forEach(x=>{by[x.topic]=by[x.topic]||{t:0,d:0};by[x.topic].t++;if(status(x.id)==='Solved')by[x.topic].d++});const sol=DATA.master.filter(x=>status(x.id)==='Solved').length;$('#root').innerHTML=`<div class="grid four"><div class=card><div class=label>Completion</div><div class=big>${Math.round(sol/DATA.master.length*100)}%</div></div><div class=card><div class=label>XP</div><div class=big>${S.xp}</div></div><div class=card><div class=label>Started</div><div class=big>${DATA.master.filter(x=>status(x.id)!=='Not Started').length}</div></div><div class=card><div class=label>Mistakes</div><div class=big>${S.mistakes.length}</div></div></div><section class=section><div class=card><h2>Topic Coverage</h2><table class=table><tr><th>Topic</th><th>Total</th><th>Solved</th><th>Progress</th></tr>${Object.entries(by).sort((a,b)=>b[1].t-a[1].t).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v.t}</td><td>${v.d}</td><td><div class=progress><div class=bar style="width:${v.d/v.t*100}%"></div></div></td></tr>`).join('')}</table></div></section>`}
+function pseudocode(){
+  const options=DATA.master.map(x=>`<option value="${x.id}">${esc(x.title)}</option>`).join('');
+  const selected=S.pseudoCurrent||DATA.master[0]?.id||'';
+  const current=DATA.master.find(x=>x.id===selected);
+  const text=String(S.pseudocode[selected]||'');
+  $('#root').innerHTML=`<div class=card><div class=head><div><h2 style="margin:0">✍️ Pseudo Code Lab</h2><div class=muted>Problem select karo, apna approach/pseudocode likho, save karo. Topic aur pattern intentionally hidden.</div></div><span class=badge>${Object.keys(S.pseudocode).filter(k=>S.pseudocode[k]).length} saved</span></div>
+  <div class=field><label>Problem</label><select id=pseudoProblem class=select onchange="loadPseudo(this.value)">${options}</select></div>
+  <div class=field><label>Your Pseudo Code / Approach</label><textarea id=pseudoText class=area style="min-height:360px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace" placeholder="Write your approach step-by-step...">${esc(text)}</textarea></div>
+  <div class=head><span class=muted id=pseudoCount>${text.length} characters</span><div class=actions><button class=btn onclick="clearPseudo()">Clear</button><button class="btn primary" onclick="savePseudo()">💾 Save Pseudo Code</button></div></div>
+  <div class=card style="margin-top:14px;background:#091221"><b>Suggested structure</b><div class=muted style="margin-top:7px;white-space:pre-line">1. What do I need to find?
+2. Key observation / invariant
+3. Data structure / algorithm
+4. Step-by-step logic
+5. Edge cases
+6. Time Complexity
+7. Space Complexity</div></div></div>`;
+  $('#pseudoProblem').value=selected;
+  $('#pseudoText').addEventListener('input',()=>$('#pseudoCount').textContent=$('#pseudoText').value.length+' characters');
+}
+function loadPseudo(id){S.pseudoCurrent=id;save();pseudocode();}
+function savePseudo(){const id=$('#pseudoProblem').value;S.pseudoCurrent=id;S.pseudocode[id]=$('#pseudoText').value;save();toast('✍️ Pseudo code saved');pseudocode();}
+function clearPseudo(){const id=$('#pseudoProblem').value;if(!confirm('Clear this pseudo code?'))return;delete S.pseudocode[id];save();pseudocode();toast('Cleared');}
+
 function settings(){$('#root').innerHTML=`<div class="grid two"><div class=card><h2>Profile</h2><div class=field><label>Display name</label><input id=displayName class=input value="${esc(S.name)}"></div><div class=field><label>Daily goal</label><select id=dailyGoal class=select>${[10,15,20,25,30].map(n=>`<option value="${n}" ${Number(S.dailyGoal)===n?'selected':''}>${n} questions/day</option>`).join('')}</select></div><button class="btn primary" onclick="S.name=$('#displayName').value||'OA Warrior';S.dailyGoal=Number($('#dailyGoal').value);save();toast('Saved')">Save</button><hr style="border-color:var(--line);margin:20px 0"><h2>Account</h2>${mode==='cloud'?`<p class=muted>Signed in as <b>${esc(user?.email||'')}</b></p><button class="btn danger" onclick=signOut>Sign out</button>`:'<p class=muted>Local demo mode.</p>'}</div><div class=card><h2>☁ Cloud Sync</h2><p class=muted>XP, solved status, notes, mistakes, goals and review state sync with your account.</p><p><span class="sync-dot ${mode==='cloud'?'ok':''}"></span>${mode==='cloud'?'Connected':'Local only'}</p><button class=btn onclick=manualSync>${mode==='cloud'?'Sync now':'Cloud sync is not connected'}</button><h3>Backup</h3><button class=btn onclick=exportProgress>Export JSON</button> <button class=btn onclick=importProgress>Import JSON</button></div></div>`}async function manualSync(){if(mode!=='cloud'){toast('Connect cloud mode first');return}await cloudSave();toast('Sync requested')}
 async function signOut(){await signout()}
 function oa(){const pool=DATA.master.filter(x=>status(x.id)!=='Solved');if(!S.oa)S.oa={attempts:0,solved:0,current:null};if(!S.oa.current&&pool.length)S.oa.current=pool[Math.floor(Math.random()*pool.length)].id;const x=DATA.master.find(z=>z.id===S.oa.current);$('#root').innerHTML=`<div class=card><div class=head><div><div class=label>OA SIMULATION</div><h2 style="margin:4px 0">Identify the pattern yourself.</h2></div><span class=badge>${S.oa.solved||0} solved / ${S.oa.attempts||0} attempts</span></div>${x?`<h2>${esc(x.title)}</h2><p class=muted>Topic and pattern are hidden until you open the challenge.</p><div class=actions><button class="btn primary" onclick="oaOpen()">Open Challenge</button><button class=btn onclick="oaSkip()">Skip</button></div>`:'<div class=empty>All available problems solved 🎉</div>'}</div>`}
