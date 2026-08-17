@@ -38,6 +38,8 @@ button,input,select,textarea{font:inherit}.hidden{display:none!important}
     <button data-page="analytics">📈 <span>Analytics</span></button>
     <button data-page="oa">⚔️ <span>OA Simulation</span></button>
     <button data-page="review">🔁 <span>Smart Review</span></button>
+    <button data-page="history">📅 <span>Day History</span></button>
+    <button data-page="favorites">⭐ <span>Favorites</span></button>
     <button data-page="settings">⚙️ <span>Account & Sync</span></button>
   </nav>
   <div class="side-user"><b id="userName">OA Warrior</b><div class="muted"><span id="syncDot" class="sync-dot"></span><span id="syncText">Local</span></div></div>
@@ -60,7 +62,7 @@ const DATA = {"master": [{"title": "Collect Coins In A Tree", "url": "https://le
 const DATA_KEY='dsaQuestCloudLocalV4';
 let db=null, user=null, mode='local', page='home', timer=null, timerLeft=1500;
 let S=JSON.parse(localStorage.getItem(DATA_KEY)||'{}');
-S.status=S.status||{};S.notes=S.notes||{};S.mistakes=S.mistakes||[];S.xp=S.xp||0;S.history=S.history||{};S.days=S.days||{};S.name=S.name||'OA Warrior';S.dailyGoal=S.dailyGoal||20;
+S.status=S.status||{};S.notes=S.notes||{};S.mistakes=S.mistakes||[];S.favorites=Array.isArray(S.favorites)?S.favorites:[];S.xp=S.xp||0;S.history=S.history||{};S.days=S.days||{};S.name=S.name||'OA Warrior';S.dailyGoal=S.dailyGoal||20;
 
 const $=s=>document.querySelector(s);
 const esc=x=>String(x??'').replace(/[&<>"']/g,a=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[a]));
@@ -151,15 +153,22 @@ function setStatus(id,v){
 function dayNumber(){const n=Math.floor((new Date()-new Date('2026-08-17T00:00:00'))/86400000)+1;return Math.max(1,Math.min(Math.ceil(DATA.daily.length/20),n))}
 function go(p){page=p;document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.page===p));render(p)}
 function render(p){
-  const H={home:['DSA Quest 🚀','Make DSA revision addictive.'],today:[`Day ${dayNumber()} Mission 🎯`,'Concept → Recall → Timed.'],bank:['Master Bank 📚',DATA.master.length+' unique problems.'],patterns:['Pattern Lab 🧠','Train recognition, not memorization.'],focus:['Focus Room ⏱️','One problem. Full focus.'],mistakes:['Mistake Lab ⚡','Turn every failure into an advantage.'],analytics:['Analytics 📈','See exactly where you stand.'],oa:['OA Simulation ⚔️','Mixed problems. Pattern hidden.'],review:['Smart Review 🔁','Revisit the problems your memory needs.'],settings:['Account & Sync ⚙️','Your profile, backup and cloud connection.']}[p];
-  $('#title').textContent=H[0];$('#subtitle').textContent=H[1];({home,today,bank,patterns,focus,mistakes,analytics,oa,review,settings}[p])();save();
+  const H={home:['DSA Quest 🚀','Make DSA revision addictive.'],today:[`Day ${dayNumber()} Mission 🎯`,'Concept → Recall → Timed.'],bank:['Master Bank 📚',DATA.master.length+' unique problems.'],patterns:['Pattern Lab 🧠','Train recognition, not memorization.'],focus:['Focus Room ⏱️','One problem. Full focus.'],mistakes:['Mistake Lab ⚡','Turn every failure into an advantage.'],analytics:['Analytics 📈','See exactly where you stand.'],oa:['OA Simulation ⚔️','Mixed problems. Pattern hidden.'],review:['Smart Review 🔁','Revisit the problems your memory needs.'],history:['Day History 📅','Open any previous or upcoming day.'],favorites:['Favorites ⭐','Your personal revisit list.'],settings:['Account & Sync ⚙️','Your profile, backup and cloud connection.']}[p];
+  $('#title').textContent=H[0];$('#subtitle').textContent=H[1];({home,today,bank,patterns,focus,mistakes,analytics,oa,review,history,favorites,settings}[p])();save();
+}
+function isFavorite(id){return S.favorites.includes(id)}
+function toggleFavorite(id){
+  if(isFavorite(id)) S.favorites=S.favorites.filter(x=>x!==id); else S.favorites.unshift(id);
+  save(); toast(isFavorite(id)?'⭐ Added to Favorites':'☆ Removed from Favorites'); render(page);
 }
 function qcard(x){
-  const v=status(x.id);
-  return `<div class=q><button class="check ${v==='Solved'?'done':''}" onclick="setStatus('${x.id}','${v==='Solved'?'Not Started':'Solved'}')">${v==='Solved'?'✓':'○'}</button>
-  <div class=qm><div class=qn>${esc(x.title)}</div><div class=badges><span class=badge>${esc(x.topic)}</span><span class=badge>${esc(x.pattern)}</span><span class="badge ${x.importance==='P1'?'p1':''}">${x.importance}</span></div></div>
+  const v=status(x.id),fav=isFavorite(x.id);
+  return `<div class=q><button class=check ${v==='Solved'?'done':''} onclick="setStatus('${x.id}','${v==='Solved'?'Not Started':'Solved'}')">${v==='Solved'?'✓':'○'}</button>
+  <div class=qm><div class=qn>${esc(x.title)}</div><div class=badges><span class=badge>${esc(x.topic)}</span><span class=badge>${esc(x.pattern)}</span><span class=badge>${esc(x.sources||x.source||'')}</span><span class="badge ${x.importance==='P1'?'p1':''}">${x.importance}</span></div></div>
+  <button class=btn title="${fav?'Remove from Favorites':'Add to Favorites'}" onclick="toggleFavorite('${x.id}')">${fav?'⭐':'☆'}</button>
   <button class=btn onclick="openProblem('${x.id}')">Open</button></div>`;
 }
+
 function home(){
   const solved=DATA.master.filter(x=>status(x.id)==='Solved').length,p=Math.round(solved/DATA.master.length*100),it=DATA.daily.filter(x=>x.day===dayNumber()),todaySolved=it.filter(x=>status(x.masterId)==='Solved').length,re=DATA.master.filter(x=>status(x.id)==='Revisit').slice(0,6);
   $('#root').innerHTML=`<div class="grid stats">
@@ -181,6 +190,37 @@ function today(){
   ${['Concept Rebuild','Approach Recall','Timed Coding'].map(sec=>`<section class=section><div class=head><h2>${sec}</h2><span class=badge>${it.filter(x=>x.section===sec).length}</span></div><div class=card>${it.filter(x=>x.section===sec).map(x=>DATA.master.find(z=>z.id===x.masterId)).filter(Boolean).map(qcard).join('')}</div></section>`).join('')}`;
 }
 function finishDay(){const it=DATA.daily.filter(x=>x.day===dayNumber());if(it.some(x=>status(x.masterId)!=='Solved')){toast('Complete the mission first 💪');return}if(!S.days[dayNumber()]){S.days[dayNumber()]=new Date().toISOString();S.xp+=100;toast('🏆 Day complete! +100 XP')}save();render('today')}
+function dayStats(day){
+  const items=DATA.daily.filter(x=>x.day===day), solved=items.filter(x=>status(x.masterId)==='Solved').length;
+  return {items,solved,total:items.length,done:items.length>0&&solved===items.length};
+}
+function history(){
+  const totalDays=Math.ceil(DATA.daily.length/20), current=dayNumber();
+  const cards=[];
+  for(let d=1;d<=totalDays;d++){
+    const st=dayStats(d), planned=DATA.daily.find(x=>x.day===d)?.date||'';
+    const completed=!!S.days[d]||st.done;
+    const pct=st.total?Math.round(st.solved/st.total*100):0;
+    const state=d===current?'Today':completed?'Completed':d<current?'In Progress':'Upcoming';
+    cards.push(`<div class=card><div class=head><div><h3 style="margin:0">Day ${d} ${d===current?'🎯':''}</h3><div class=muted>${esc(planned)} · ${st.solved}/${st.total} solved</div></div><span class="badge ${completed?'success':''}">${state}</span></div><div class=progress><div class=bar style="width:${pct}%"></div></div><div class=actions style="margin-top:10px"><button class=btn onclick="viewDay(${d})">Open Day</button></div></div>`);
+  }
+  $('#root').innerHTML=`<div class=card><div class=head><div><h2 style="margin:0">📅 Day History</h2><div class=muted>Nothing is deleted when the date changes. Reopen any day anytime.</div></div><span class=badge>${totalDays} days</span></div></div><div class=grid two style="margin-top:14px">${cards.join('')}</div>`;
+}
+function viewDay(day){
+  const it=DATA.daily.filter(x=>x.day===day),done=it.filter(x=>status(x.masterId)==='Solved').length;
+  $('#title').textContent=`Day ${day} Mission 📅`;$('#subtitle').textContent=`${done}/${it.length} completed · Previous days remain available`;
+  $('#root').innerHTML=`<div class=card><div class=head><div><h2 style="margin:0">Day ${day}</h2><div class=muted>${esc(it[0]?.date||'')} · ${done}/${it.length} solved</div></div><button class=btn onclick="go('history')">← All Days</button></div><div class=progress><div class=bar style="width:${it.length?done/it.length*100:0}%"></div></div></div>${['Concept Rebuild','Approach Recall','Timed Coding'].map(sec=>`<section class=section><div class=head><h2>${sec}</h2><span class=badge>${it.filter(x=>x.section===sec).length}</span></div><div class=card>${it.filter(x=>x.section===sec).map(x=>DATA.master.find(z=>z.id===x.masterId)).filter(Boolean).map(qcard).join('')}</div></section>`).join('')}`;
+}
+function favorites(){
+  const a=S.favorites.map(id=>DATA.master.find(x=>x.id===id)).filter(Boolean);
+  $('#root').innerHTML=`<div class=card><div class=head><div><h2 style="margin:0">⭐ Favorites</h2><div class=muted>${a.length} saved for revision.</div></div><span class=badge>Cloud synced</span></div><div class=actions><button class=btn onclick="favoriteFilter('all')">All</button><button class=btn onclick="favoriteFilter('unsolved')">Unsolved</button><button class=btn onclick="favoriteFilter('failed')">Failed</button><button class=btn onclick="favoriteFilter('revisit')">Revisit</button></div><div id=favList style="margin-top:12px"></div></div>`;
+  favoriteFilter('all');
+}
+function favoriteFilter(kind){
+  const a=S.favorites.map(id=>DATA.master.find(x=>x.id===id)).filter(Boolean).filter(x=>kind==='all'||(kind==='unsolved'&&status(x.id)!=='Solved')||(kind==='failed'&&status(x.id)==='Failed')||(kind==='revisit'&&status(x.id)==='Revisit'));
+  const el=$('#favList'); if(!el)return; el.innerHTML=a.length?a.map(qcard).join(''):'<div class=empty>No problems in this filter.</div>';
+}
+
 function bank(){
   const topics=[...new Set(DATA.master.map(x=>x.topic))].sort(),patterns=[...new Set(DATA.master.map(x=>x.pattern))].sort();
   $('#root').innerHTML=`<div class=filters><input id=fq class=input placeholder="Search problem, pattern, source…" oninput=filterBank()><select id=ft class=select onchange=filterBank()><option value="">All topics</option>${topics.map(x=>`<option>${esc(x)}</option>`).join('')}</select><select id=fp class=select onchange=filterBank()><option value="">All patterns</option>${patterns.map(x=>`<option>${esc(x)}</option>`).join('')}</select><select id=fi class=select onchange=filterBank()><option value="">Priority</option><option>P1</option><option>P2</option></select><select id=fs class=select onchange=filterBank()><option value="">Status</option><option>Not Started</option><option>Solved</option><option>Failed</option><option>Revisit</option></select></div><div id=bankList></div>`;filterBank();
@@ -200,7 +240,7 @@ function oaOpen(){S.oa.attempts=(S.oa.attempts||0)+1;save();openProblem(S.oa.cur
 function oaSkip(){const a=DATA.master.filter(x=>status(x.id)!=='Solved'&&x.id!==S.oa.current);S.oa.current=a.length?a[Math.floor(Math.random()*a.length)].id:null;save();oa()}
 function review(){const a=DATA.master.filter(x=>status(x.id)==='Failed'||status(x.id)==='Revisit'||S.notes[x.id]);$('#root').innerHTML=`<div class=card><div class=head><div><h2 style="margin:0">Smart Review Queue</h2><div class=muted>${a.length} problems need attention.</div></div><button class="btn primary" onclick="reviewRandom()">Review one 🎯</button></div>${a.length?a.map(qcard).join(''):'<div class=empty>Nothing needs review right now. 🔥</div>'}</div>`}
 function reviewRandom(){const a=DATA.master.filter(x=>status(x.id)==='Failed'||status(x.id)==='Revisit'||S.notes[x.id]);if(a.length)openProblem(a[Math.floor(Math.random()*a.length)].id);else toast('Review queue is empty 🎉')}
-function openProblem(id){const x=DATA.master.find(z=>z.id===id);$('#modalBody').innerHTML=`<div class=label>${esc(x.topic)} · ${esc(x.pattern)}</div><h2>${esc(x.title)}</h2><div class=badges><span class=badge>${esc(x.sources)}</span><span class="badge ${x.importance==='P1'?'p1':''}">${x.importance}</span></div>${x.notes?`<h3>Source note</h3><p class=muted>${esc(x.notes)}</p>`:''}<p><a class="btn primary" href="${esc(x.url)}" target=_blank>Open Problem ↗</a> <button class=btn onclick="setStatus('${x.id}','Solved');closeModal()">Solved ✓</button> <button class=btn onclick="setStatus('${x.id}','Revisit');closeModal()">Revisit</button> <button class=btn onclick="setStatus('${x.id}','Failed');closeModal()">Failed</button></p><div class=field><label>Personal note</label><textarea id=problemNote class=area>${esc(S.notes[x.id]||'')}</textarea></div><button class=btn onclick="S.notes['${x.id}']=$('#problemNote').value;save();toast('Note saved')">Save note</button>`;$('#modal').classList.add('show')}
+function openProblem(id){const x=DATA.master.find(z=>z.id===id);$('#modalBody').innerHTML=`<div class=label>${esc(x.topic)} · ${esc(x.pattern)}</div><h2>${esc(x.title)}</h2><div class=badges><span class=badge>${esc(x.sources)}</span><span class="badge ${x.importance==='P1'?'p1':''}">${x.importance}</span></div>${x.notes?`<h3>Source note</h3><p class=muted>${esc(x.notes)}</p>`:''}<p><a class="btn primary" href="${esc(x.url)}" target=_blank>Open Problem ↗</a> <button class=btn onclick="toggleFavorite('${x.id}')">${isFavorite(x.id)?'⭐ Remove Favorite':'☆ Add Favorite'}</button> <button class=btn onclick="setStatus('${x.id}','Solved');closeModal()">Solved ✓</button> <button class=btn onclick="setStatus('${x.id}','Revisit');closeModal()">Revisit</button> <button class=btn onclick="setStatus('${x.id}','Failed');closeModal()">Failed</button></p><div class=field><label>Personal note</label><textarea id=problemNote class=area>${esc(S.notes[x.id]||'')}</textarea></div><button class=btn onclick="S.notes['${x.id}']=$('#problemNote').value;save();toast('Note saved')">Save note</button>`;$('#modal').classList.add('show')}
 function openPattern(i){const x=DATA.patterns[i];$('#modalBody').innerHTML=`<h2>${esc(x.name)}</h2><h3>How to recognize</h3><p class=muted>${esc(x.recognize)}</p><h3>Core idea</h3><p class=muted>${esc(x.core)}</p><h3>When to hit</h3><p class=muted>${esc(x.hit)}</p><h3>When NOT to use</h3><p class=muted>${esc(x.not)}</p><h3>Implementation traps</h3><p class=muted>${esc(x.traps)}</p>`;$('#modal').classList.add('show')}
 function closeModal(){$('#modal').classList.remove('show')}
 function randomQ(){const a=DATA.master.filter(x=>status(x.id)!=='Solved');if(!a.length){toast('🎉 Everything solved!');return}openProblem(a[Math.floor(Math.random()*a.length)].id)}
